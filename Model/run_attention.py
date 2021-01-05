@@ -22,32 +22,34 @@ except ImportError:
     raise
 
 print("All imports okay. Yay!")
-# TODO delete or copy assert
 
 
-def find_lights_indexes(image):
-    indices = np.where(np.all(image != 0, axis=-1))
-    return indices[1], indices[0]
+def find_green_lights(c_image, kernel):
+    green_layer = sg.convolve2d(c_image[:, :, 1], kernel, mode='same', boundary='fill', fillvalue=0)
+    green_layer = green_layer / green_layer.max() * 255
+
+    green_layer_filtered = ndimage.maximum_filter(green_layer, 90)
+
+    green_coordinates = np.argwhere(green_layer_filtered == green_layer)
+
+    x_green = [coordinate[1] for coordinate in green_coordinates]
+    y_green = [coordinate[0] for coordinate in green_coordinates]
+
+    return x_green, y_green
 
 
-def find_green_lights(image):
-    result = image.copy()
-    new_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower = np.array([0, 130, 100])
-    upper = np.array([255, 179, 255])
-    mask = cv2.inRange(new_image, lower, upper)
-    result = cv2.bitwise_and(result, result, mask=mask)
-    return result
+def find_red_lights(c_image, kernel):
+    red_layer = sg.convolve2d(c_image[:, :, 0], kernel, mode='same', boundary='fill', fillvalue=0)
+    red_layer = red_layer / red_layer.max() * 255
 
+    red_layer_filtered = ndimage.maximum_filter(red_layer, 90)
 
-def find_red_lights(image):
-    result = image.copy()
-    new_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower = np.array([120, 25, 0])
-    upper = np.array([179, 255, 100])
-    mask = cv2.inRange(new_image, lower, upper)
-    result = cv2.bitwise_and(result, result, mask=mask)
-    return result
+    red_coordinates = np.argwhere(red_layer_filtered == red_layer)
+
+    x_red = [coordinate[1] for coordinate in red_coordinates]
+    y_red = [coordinate[0] for coordinate in red_coordinates]
+
+    return x_red, y_red
 
 
 def find_tfl_lights(c_image: np.ndarray, **kwargs):
@@ -57,11 +59,13 @@ def find_tfl_lights(c_image: np.ndarray, **kwargs):
     :param kwargs: Whatever config you want to pass in here
     :return: 4-tuple of x_red, y_red, x_green, y_green
     """
-    res = find_red_lights(c_image)
-    x_red, y_red = find_lights_indexes(res)
 
-    res = find_green_lights(c_image)
-    x_green, y_green = find_lights_indexes(res)
+    t = 1 - np.abs(np.linspace(-1, 1, 5))
+    kernel = t.reshape(5, 1) * t.reshape(1, 5)
+    kernel /= kernel.sum()
+
+    x_red, y_red = find_red_lights(c_image, kernel)
+    x_green, y_green = find_green_lights(c_image, kernel)
 
     return x_red, y_red, x_green, y_green
 
@@ -97,6 +101,7 @@ def test_find_tfl_lights(image_path, json_path=None, fig_num=None):
     plt.plot(red_x, red_y, 'ro', color='r', markersize=4)
     plt.plot(green_x, green_y, 'ro', color='g', markersize=4)
 
+
 # TODO delete this lines
 # def main(argv=None):
 #     """It's nice to have a standalone tester for the algorithm.
@@ -127,7 +132,7 @@ def test_find_tfl_lights(image_path, json_path=None, fig_num=None):
 #     else:
 #         print("Bad configuration?? Didn't find any picture to show")
 #     plt.show(block=True)
-
-
+#
+#
 # if __name__ == '__main__':
 #     main()
