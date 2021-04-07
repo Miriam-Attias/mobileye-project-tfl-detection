@@ -1,58 +1,34 @@
 try:
-    print("Elementary imports: ")
     import os
     import json
     import glob
     import argparse
-    import cv2
 
-    print("numpy/scipy imports:")
     import numpy as np
     from scipy import signal as sg
-    import scipy.ndimage as ndimage
     from scipy.ndimage.filters import maximum_filter
 
-    print("PIL imports:")
     from PIL import Image
 
-    print("matplotlib imports:")
     import matplotlib.pyplot as plt
 except ImportError:
     print("Need to fix the installation")
     raise
 
-print("All imports okay. Yay!")
+
+def find_lights(c_image, kernel, rgb_color):
+    layer = sg.convolve2d(c_image[:, :, rgb_color], kernel, mode='same', boundary='fill', fillvalue=0)
+    layer = layer / layer.max() * 255
+    layer_filtered = maximum_filter(layer, 81)
+    coordinates = np.argwhere(layer_filtered == layer)
+
+    x = [coordinate[1] for coordinate in coordinates]
+    y = [coordinate[0] for coordinate in coordinates]
+
+    return x, y
 
 
-def find_green_lights(c_image, kernel):
-    green_layer = sg.convolve2d(c_image[:, :, 1], kernel, mode='same', boundary='fill', fillvalue=0)
-    green_layer = green_layer / green_layer.max() * 255
-
-    green_layer_filtered = ndimage.maximum_filter(green_layer, 90)
-
-    green_coordinates = np.argwhere(green_layer_filtered == green_layer)
-
-    x_green = [coordinate[1] for coordinate in green_coordinates]
-    y_green = [coordinate[0] for coordinate in green_coordinates]
-
-    return x_green, y_green
-
-
-def find_red_lights(c_image, kernel):
-    red_layer = sg.convolve2d(c_image[:, :, 0], kernel, mode='same', boundary='fill', fillvalue=0)
-    red_layer = red_layer / red_layer.max() * 255
-
-    red_layer_filtered = ndimage.maximum_filter(red_layer, 90)
-
-    red_coordinates = np.argwhere(red_layer_filtered == red_layer)
-
-    x_red = [coordinate[1] for coordinate in red_coordinates]
-    y_red = [coordinate[0] for coordinate in red_coordinates]
-
-    return x_red, y_red
-
-
-def find_tfl_lights(c_image: np.ndarray, **kwargs):
+def find_tfl_lights(c_image: np.ndarray):
     """
     Detect candidates for TFL lights. Use c_image, kwargs and you imagination to implement
     :param c_image: The image itself as np.uint8, shape of (H, W, 3)
@@ -60,12 +36,12 @@ def find_tfl_lights(c_image: np.ndarray, **kwargs):
     :return: 4-tuple of x_red, y_red, x_green, y_green
     """
 
-    t = 1 - np.abs(np.linspace(-1, 1, 5))
-    kernel = t.reshape(5, 1) * t.reshape(1, 5)
-    kernel /= kernel.sum()
+    kernel = np.array([[0.0625, 0.125, 0.0625],
+                       [0.125, 0.25, 0.125],
+                       [0.0625, 0.125, 0.0625]])
 
-    x_red, y_red = find_red_lights(c_image, kernel)
-    x_green, y_green = find_green_lights(c_image, kernel)
+    x_red, y_red = find_lights(c_image, kernel, 0)
+    x_green, y_green = find_lights(c_image, kernel, 1)
 
     return x_red, y_red, x_green, y_green
 
