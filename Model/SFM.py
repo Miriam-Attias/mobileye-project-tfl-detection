@@ -42,7 +42,7 @@ def calc_3D_data(norm_prev_pts, norm_curr_pts, R, foe, tZ):
         corresponding_ind.append(corresponding_p_ind)
     return corresponding_ind, np.array(pts_3D), validVec
 
-
+#TODO take care of zero focal
 def normalize(pts, focal, pp):
     # transform pixels into normalized pixels using the focal length and principle point
     return np.array([np.array([tfl[0] - pp[0], tfl[1] - pp[1], focal]) / focal for tfl in pts])
@@ -86,4 +86,3 @@ def calc_dist(p_curr, p_rot, foe, tZ):
     print(dist_x, dist_y)
 
     return np.average([dist_x, dist_y], weights=[abs(p_rot[0] - p_curr[0]), abs(p_rot[1] - p_curr[1])])
-
